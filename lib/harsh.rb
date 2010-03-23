@@ -42,6 +42,37 @@ module Harsh
       Uv.parse( text, "xhtml", opts[:format].to_s, opts[:lines], opts[:theme].to_s)
     end
     alias_method :harsh, :syntax_highlight
+    
+    def prettify(text)
+      text_pieces = text.split(/(<pre>\s*<code>\s*\[\w+\]|<pre>\s*<code>\s*|<\/code>\s*<\/pre>)/)
+      in_pre = false
+      language = nil
+      text_pieces.collect do |piece|
+        if piece =~ /^<pre>\s*<code>\s*(\[(\w+)\])?$/
+          language = $2
+          in_pre = true
+          nil
+        elsif piece =~ /^<\/code>\s*<\/pre>/
+          in_pre = false
+          nil
+        elsif in_pre
+          lang = language ? language : :ruby
+          harsh :format => lang do
+            CGI::unescapeHTML(piece)
+          end
+        else
+          piece
+        end
+      end
+    end      
+    
+    def markdown(text)
+      prettify (defined?(RDiscount) ? RDiscount : BlueCloth).new(text).to_html
+    end
+    
+    def textilize(text)
+      prettify RedCloth.new(text).to_html
+    end
   end
   
   class << self
